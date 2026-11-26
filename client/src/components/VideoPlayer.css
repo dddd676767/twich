@@ -1,0 +1,158 @@
+.player-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.player-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #0d0e12;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.player-video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.player-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 14, 18, 0.82);
+  padding: 20px;
+}
+
+.player-overlay-box {
+  text-align: center;
+  max-width: 360px;
+}
+
+.player-overlay-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #f3f4f6;
+  margin-bottom: 6px;
+}
+
+.player-overlay-sub {
+  font-size: 14px;
+  color: #9ca3af;
+  margin-bottom: 14px;
+}
+
+.player-retry-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.player-overlay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.player-cam-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.player-stop-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.player-cam-error {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+  font-size: 13px;
+  text-align: left;
+}
+
+.player-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: #fff;
+}
+
+.player-badge--live,
+.player-badge--publishing {
+  background: #dc2626;
+}
+
+.player-badge--connecting {
+  background: #d97706;
+}
+
+.player-badge--offline {
+  background: #4b5563;
+}
+
+.player-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--social-bg);
+}
+
+.player-stream-name {
+  margin: 0 0 4px;
+  font-size: 20px;
+  color: var(--text-h);
+}
+
+.player-hint {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.player-info-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-hint a {
+  color: var(--accent);
+}

@@ -1,0 +1,213 @@
+.stream-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  width: 100%;
+}
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--social-bg);
+}
+
+.topbar-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+}
+
+.stream-switcher {
+  display: flex;
+  gap: 6px;
+}
+
+.stream-switcher-input {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font-family: var(--mono);
+  font-size: 13px;
+  width: 160px;
+}
+
+.stream-switcher-btn,
+.logout-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.live-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.live-pill.is-active {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6b7280;
+}
+
+.live-dot.is-ready {
+  background: #dc2626;
+}
+
+.mediamtx-warn {
+  font-size: 12px;
+  color: #d97706;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-email {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.twitch-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  padding: 16px 20px;
+  align-items: stretch;
+  flex: 1;
+}
+
+.twitch-stage {
+  min-width: 0;
+}
+
+.twitch-chat {
+  min-width: 0;
+  display: flex;
+}
+
+@media (max-width: 960px) {
+  .twitch-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.auth-checking {
+  margin: auto;
+  padding: 32px;
+}
+
+.auth-form {
+  width: 100%;
+  max-width: 380px;
+  margin: auto;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.auth-form h1 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  text-align: center;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.auth-tabs button {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--social-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.auth-tabs button.active {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.auth-form input {
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.auth-form .submit {
+  margin-top: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-error {
+  color: #dc2626;
+  font-size: 13px;
+}
+
+.auth-notice {
+  color: #16a34a;
+  font-size: 13px;
+}
