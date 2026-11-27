@@ -19,7 +19,9 @@ type WsInbound =
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
-const CHAT_WS_BASE = import.meta.env.VITE_CHAT_WS_URL ?? 'ws://127.0.0.1:8080/ws'
+const CHAT_WS_BASE =
+  import.meta.env.VITE_CHAT_WS_URL ??
+  `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
 
 type ChatProps = {
   token: string

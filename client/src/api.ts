@@ -2,7 +2,7 @@
 import axios, { AxiosError } from "axios"
 
 export const api = axios.create({
-    baseURL:"http://127.0.0.1:8000",
+    baseURL: import.meta.env.VITE_API_URL ?? "/api",
 })
 
 // токен цеплялся ко всем запросам 
@@ -14,7 +14,7 @@ api.interceptors.request.use((config) => {
 
 // У нас есть detail ошибки на Fastapi и заменим их в клиенте 
 
-api.interceptors.request.use((res)=>res,
+api.interceptors.response.use((res)=>res,
     (error:AxiosError<{detail:unknown}>) => {
         if (!error.response) {
             return Promise.reject(new Error("Бекенд недоступен"))

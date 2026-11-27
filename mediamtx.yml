@@ -62,6 +62,8 @@ webrtcAdditionalHosts: []
 ############################################################
 rtsp: yes
 rtspAddress: :8554
+rtpAddress: :18000
+rtcpAddress: :18001
 srt: yes
 srtAddress: :8890
 

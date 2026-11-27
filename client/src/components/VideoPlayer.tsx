@@ -1,10 +1,14 @@
+import Hls from 'hls.js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import './VideoPlayer.css'
 
 const MEDIAMTX_WEBRTC_BASE =
-  import.meta.env.VITE_MEDIAMTX_WEBRTC_URL ?? 'http://127.0.0.1:8889'
+  import.meta.env.VITE_MEDIAMTX_WEBRTC_URL ?? '/mtx-webrtc'
+const MEDIAMTX_HLS_BASE =
+  import.meta.env.VITE_MEDIAMTX_HLS_URL ?? '/mtx-hls'
 
 type PlayerState = 'connecting' | 'live' | 'offline' | 'publishing'
+type PlayProtocol = 'webrtc' | 'hls'
 
 type VideoPlayerProps = {
   streamPath: string
@@ -28,15 +32,28 @@ async function waitForIceGathering(pc: RTCPeerConnection, timeoutMs = 500) {
 export function VideoPlayer({ streamPath }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [state, setState] = useState<PlayerState>('connecting')
+  const [protocol, setProtocol] = useState<PlayProtocol>('webrtc')
   const [attempt, setAttempt] = useState(0)
   const [isPublishing, setIsPublishing] = useState(false)
   const [shareError, setShareError] = useState('')
+  const [showObsGuide, setShowObsGuide] = useState(false)
+  const [copiedField, setCopiedField] = useState<'server' | 'key' | null>(null)
 
   const publishPcRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
 
   const retry = useCallback(() => {
     setAttempt((n) => n + 1)
+  }, [])
+
+  const copyValue = useCallback(async (field: 'server' | 'key', value: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopiedField(field)
+      window.setTimeout(() => setCopiedField(null), 1800)
+    } catch {
+      // Ignore clipboard errors
+    }
   }, [])
 
   const stopPublishing = useCallback(() => {
@@ -78,7 +95,6 @@ export function VideoPlayer({ streamPath }: VideoPlayerProps) {
     try {
       mediaStream = await navigator.mediaDevices.getDisplayMedia(displayConstraints)
     } catch (err) {
-      // Пользователь отменил выбор экрана или браузер отклонил audio
       if (err instanceof DOMException && err.name === 'NotAllowedError') {
         setShareError('Захват экрана отменён')
         return
@@ -100,7 +116,6 @@ export function VideoPlayer({ streamPath }: VideoPlayerProps) {
 
     const [videoTrack] = mediaStream.getVideoTracks()
     if (videoTrack) {
-      // Приоритет чёткости текста и деталей интерфейса при кодировании WebRTC
       if ('contentHint' in videoTrack) {
         videoTrack.contentHint = 'detail'
       }
@@ -124,7 +139,7 @@ export function VideoPlayer({ streamPath }: VideoPlayerProps) {
         if (!params.encodings || params.encodings.length === 0) {
           params.encodings = [{}]
         }
-        params.encodings[0].maxBitrate = 4_000_000 // 4 Mbps для чёткой картинки экрана
+        params.encodings[0].maxBitrate = 4_000_000
         sender.setParameters(params).catch(() => {})
       }
     })
@@ -159,7 +174,6 @@ export function VideoPlayer({ streamPath }: VideoPlayerProps) {
     }
   }, [streamPath, stopPublishing])
 
-  // Гарантируем, что при активной публикации <video> всегда показывает локальный экран
   useEffect(() => {
     if (!isPublishing || !localStreamRef.current || !videoRef.current) return
     if (videoRef.current.srcObject !== localStreamRef.current) {
@@ -186,7 +200,64 @@ export function VideoPlayer({ streamPath }: VideoPlayerProps) {
 
     let cancelled = false
     let pc: RTCPeerConnection | null = null
+    let hls: Hls | null = null
     let retryTimer: number | undefined
+
+    const scheduleRetry = () => {
+      if (retryTimer !== undefined) return
+      retryTimer = window.setTimeout(() => {
+        if (!cancelled) setAttempt((n) => n + 1)
+      }, 3000)
+    }
+
+    if (protocol === 'hls') {
+      setState('connecting')
+      const video = videoRef.current
+      const hlsUrl = `${MEDIAMTX_HLS_BASE}/${streamPath}/index.m3u8`
+
+      if (video) {
+        video.srcObject = null
+        if (Hls.isSupported()) {
+          hls = new Hls({ lowLatencyMode: true })
+          hls.loadSource(hlsUrl)
+          hls.attachMedia(video)
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            if (cancelled) return
+            setState('live')
+            video.play().catch(() => {})
+          })
+          hls.on(Hls.Events.ERROR, (_ev, data) => {
+            if (cancelled || !data.fatal) return
+            setState('offline')
+            hls?.destroy()
+            hls = null
+            scheduleRetry()
+          })
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = hlsUrl
+          video.onloadedmetadata = () => {
+            if (cancelled) return
+            setState('live')
+            video.play().catch(() => {})
+          }
+          video.onerror = () => {
+            if (cancelled) return
+            setState('offline')
+            scheduleRetry()
+          }
+        }
+      }
+
+      return () => {
+        cancelled = true
+        if (retryTimer !== undefined) window.clearTimeout(retryTimer)
+        if (hls) hls.destroy()
+        if (videoRef.current && !publishPcRef.current) {
+          videoRef.current.removeAttribute('src')
+          videoRef.current.load()
+        }
+      }
+    }
 
     const startWebRTC = async () => {
       setState('connecting')
@@ -194,29 +265,47 @@ export function VideoPlayer({ streamPath }: VideoPlayerProps) {
       pc.addTransceiver('video', { direction: 'recvonly' })
       pc.addTransceiver('audio', { direction: 'recvonly' })
 
+      const remoteStream = new MediaStream()
+
       pc.ontrack = (event) => {
         if (cancelled) return
+        remoteStream.addTrack(event.track)
+
         const video = videoRef.current
-        if (video && event.streams[0]) {
-          video.srcObject = event.streams[0]
+        if (video) {
+          if (video.srcObject !== remoteStream) {
+            video.srcObject = remoteStream
+          }
           video.play().catch(() => {})
+        }
+
+        if (event.track.kind === 'video') {
           setState('live')
+          event.track.onunmute = () => {
+            if (!cancelled) {
+              setState('live')
+              videoRef.current?.play().catch(() => {})
+            }
+          }
         }
       }
 
-      pc.onconnectionstatechange = () => {
+      const handleDisconnect = () => {
         if (cancelled || !pc) return
         if (
           pc.connectionState === 'failed' ||
           pc.connectionState === 'disconnected' ||
-          pc.connectionState === 'closed'
+          pc.connectionState === 'closed' ||
+          pc.iceConnectionState === 'failed' ||
+          pc.iceConnectionState === 'disconnected'
         ) {
           setState('offline')
-          retryTimer = window.setTimeout(() => {
-            if (!cancelled) setAttempt((n) => n + 1)
-          }, 3000)
+          scheduleRetry()
         }
       }
+
+      pc.onconnectionstatechange = handleDisconnect
+      pc.oniceconnectionstatechange = handleDisconnect
 
       try {
         const offer = await pc.createOffer()
@@ -245,9 +334,7 @@ export function VideoPlayer({ streamPath }: VideoPlayerProps) {
           videoRef.current.srcObject = null
         }
         setState('offline')
-        retryTimer = window.setTimeout(() => {
-          if (!cancelled) setAttempt((n) => n + 1)
-        }, 3000)
+        scheduleRetry()
       }
     }
 
@@ -265,18 +352,18 @@ export function VideoPlayer({ streamPath }: VideoPlayerProps) {
         videoRef.current.srcObject = null
       }
     }
-  }, [streamPath, attempt, isPublishing])
+  }, [streamPath, attempt, isPublishing, protocol])
 
-  const rtmpUrl = 'rtmp://127.0.0.1:1935/live'
-  const streamKey = streamPath.startsWith('live/')
-    ? streamPath.slice('live/'.length)
-    : streamPath
+  const slashIdx = streamPath.indexOf('/')
+  const rtmpApp = slashIdx > 0 ? streamPath.slice(0, slashIdx) : 'live'
+  const streamKey = slashIdx > 0 ? streamPath.slice(slashIdx + 1) : streamPath
+  const rtmpUrl = `rtmp://127.0.0.1:1935/${rtmpApp}`
 
   const badgeText =
     state === 'publishing'
       ? 'LIVE · ЭКРАН'
       : state === 'live'
-        ? 'LIVE'
+        ? `LIVE · ${protocol.toUpperCase()}`
         : state === 'connecting'
           ? 'CONNECTING'
           : 'OFFLINE'
@@ -332,6 +419,34 @@ export function VideoPlayer({ streamPath }: VideoPlayerProps) {
         </div>
 
         <div className="player-info-actions">
+          {!isPublishing && (
+            <div className="protocol-switch" role="group" aria-label="Режим плеера">
+              <button
+                type="button"
+                className={`protocol-btn ${protocol === 'webrtc' ? 'is-active' : ''}`}
+                onClick={() => setProtocol('webrtc')}
+              >
+                WebRTC
+              </button>
+              <button
+                type="button"
+                className={`protocol-btn ${protocol === 'hls' ? 'is-active' : ''}`}
+                onClick={() => setProtocol('hls')}
+                title="Режим HLS совместим с любыми настройками OBS и работает через Dev Tunnels"
+              >
+                HLS (OBS)
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="player-obs-btn"
+            onClick={() => setShowObsGuide((v) => !v)}
+          >
+            {showObsGuide ? 'Скрыть OBS' : 'Настройка OBS'}
+          </button>
+
           {isPublishing ? (
             <button
               type="button"
@@ -351,6 +466,40 @@ export function VideoPlayer({ streamPath }: VideoPlayerProps) {
           )}
         </div>
       </div>
+
+      {showObsGuide && (
+        <div className="obs-guide">
+          <h3>Подключение OBS Studio к каналу {streamPath}</h3>
+          <ol className="obs-steps">
+            <li>Откройте в OBS: <strong>Настройки → Вещание → Сервис: Настраиваемый</strong>.</li>
+            <li>
+              <strong>Сервер:</strong> <code>{rtmpUrl}</code>{' '}
+              <button
+                type="button"
+                className="obs-copy-btn"
+                onClick={() => copyValue('server', rtmpUrl)}
+              >
+                {copiedField === 'server' ? 'Скопировано' : 'Копировать'}
+              </button>
+            </li>
+            <li>
+              <strong>Ключ потока:</strong> <code>{streamKey}</code>{' '}
+              <button
+                type="button"
+                className="obs-copy-btn"
+                onClick={() => copyValue('key', streamKey)}
+              >
+                {copiedField === 'key' ? 'Скопировано' : 'Копировать'}
+              </button>
+            </li>
+            <li>
+              Если видео в WebRTC не появляется или замирает: в OBS в разделе <strong>Вывод</strong>{' '}
+              поставьте <strong>B-кадры = 0</strong> (или переключите плеер выше в режим{' '}
+              <strong>HLS (OBS)</strong> — в нём работают любые настройки и просмотр через Dev Tunnels).
+            </li>
+          </ol>
+        </div>
+      )}
     </div>
   )
 }

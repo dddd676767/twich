@@ -6,7 +6,7 @@ export type MediaMTXPath = {
   readersCount: number
 }
 
-const MEDIAMTX_API_BASE = import.meta.env.VITE_MEDIAMTX_API_URL ?? 'http://127.0.0.1:9997'
+const MEDIAMTX_API_BASE = import.meta.env.VITE_MEDIAMTX_API_URL ?? '/mtx-api'
 
 export function useStreams(pollMs = 3000) {
   const [streams, setStreams] = useState<MediaMTXPath[]>([])
